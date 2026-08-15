@@ -18,34 +18,38 @@ export default function AdminLoginPage() {
     setError('');
 
     try {
-      const supabase = createBrowserClient();
-      console.log('[Admin Login] 🔑 Invoking supabase.auth.signInWithPassword...');
+      // Clear any stale browser impersonation / session tokens
+      if (typeof window !== 'undefined') {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            localStorage.removeItem(key);
+          }
+        });
+      }
 
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      console.log('[Admin Login] 🔑 Sending server-side login request...');
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      console.log('[Admin Login] 📩 Supabase Auth Response:', { data, error: authError });
+      const data = await res.json();
+      console.log('[Admin Login] 📩 Login API Response:', data);
 
-      if (authError) {
-        console.error('[Admin Login] ❌ Auth error:', authError.message);
-        throw authError;
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Authentication failed');
       }
 
-      if (data?.session) {
-        console.log('[Admin Login] ✅ Auth successful! Setting admin cookies...');
-
-        // Set cookies so server middleware permits access to /admin/*
-        document.cookie = `distro365_admin_session=true; Path=/; Max-Age=86400; SameSite=Lax`;
-        document.cookie = `distro365_admin_token=${data.session.access_token}; Path=/; Max-Age=86400; SameSite=Lax`;
-        document.cookie = `sb-admin-auth-token=${data.session.access_token}; Path=/; Max-Age=86400; SameSite=Lax`;
-
-        console.log('[Admin Login] 🔄 Navigating to /admin/dashboard...');
-        window.location.href = '/admin/dashboard';
-      } else {
-        throw new Error('No session returned from authentication');
+      // Set client cookies for immediate navigation
+      document.cookie = `distro365_admin_session=true; Path=/; Max-Age=86400; SameSite=Lax`;
+      if (data.token) {
+        document.cookie = `distro365_admin_token=${data.token}; Path=/; Max-Age=86400; SameSite=Lax`;
+        document.cookie = `sb-admin-auth-token=${data.token}; Path=/; Max-Age=86400; SameSite=Lax`;
       }
+
+      console.log('[Admin Login] ✅ Auth successful! Navigating to /admin/dashboard...');
+      window.location.href = '/admin/dashboard';
     } catch (err) {
       console.error('[Admin Login] ⚠️ Catch block error:', err);
       setError(err instanceof Error ? err.message : 'Login failed');

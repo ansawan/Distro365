@@ -39,25 +39,33 @@ export async function POST(request: NextRequest) {
     sku,
     option_name = 'Flavor',
     option_value,
+    attributes = {},
     price = 0,
+    compare_at_price,
     inventory_qty = 10,
     stock = 10,
     image_src,
+    barcode,
+    is_active = true,
   } = body;
 
   if (!product_handle) {
     return NextResponse.json({ error: 'product_handle is required' }, { status: 400 });
   }
 
-  const payload = {
+  const payload: Record<string, any> = {
     product_handle,
     sku: sku || null,
     option_name: option_name || 'Flavor',
     option_value: option_value || 'Default',
+    attributes: typeof attributes === 'object' ? attributes : {},
     price: parseFloat(price) || 0,
     inventory_qty: parseInt(inventory_qty || stock || 0, 10),
     image_src: image_src || null,
   };
+  if (compare_at_price !== undefined) payload.compare_at_price = parseFloat(compare_at_price) || null;
+  if (barcode !== undefined) payload.barcode = barcode || null;
+  if (is_active !== undefined) payload.is_active = Boolean(is_active);
 
   console.log('[API POST /api/variants] Creating variant payload:', payload);
 
@@ -70,6 +78,22 @@ export async function POST(request: NextRequest) {
   console.log('[API POST /api/variants] Insert response - data:', data, 'error:', error);
 
   if (error) {
+    // Retry without columns if missing in DB schema
+    if (error.message?.includes('column')) {
+      const fallbackPayload = {
+        product_handle,
+        sku: sku || null,
+        option_name: option_name || 'Flavor',
+        option_value: option_value || 'Default',
+        price: parseFloat(price) || 0,
+        inventory_qty: parseInt(inventory_qty || stock || 0, 10),
+        image_src: image_src || null,
+      };
+      const fb = await supabaseAdmin.from('product_variants').insert(fallbackPayload).select().single();
+      if (fb.data) {
+        return NextResponse.json({ variant: { ...fb.data, attributes, compare_at_price, barcode, is_active } }, { status: 201 });
+      }
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

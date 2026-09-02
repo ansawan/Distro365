@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProductVariant } from '@/backend/lib/types';
 
 interface VariantSelectorProps {
@@ -16,8 +16,130 @@ export default function VariantSelector({
 }: VariantSelectorProps) {
   if (!variants || variants.length === 0) return null;
 
-  // Deduplicate variants by option_value (case-insensitive)
-  const uniqueVariants = variants.reduce<ProductVariant[]>((acc, current) => {
+  // Filter active variants only (or all if active flag missing)
+  const activeVariants = variants.filter((v) => v.is_active !== false);
+  if (activeVariants.length === 0) return null;
+
+  // Check if variants have multi-attribute mapping
+  const hasAttributesObj = activeVariants.some(
+    (v) => v.attributes && Object.keys(v.attributes).length > 1
+  );
+
+  if (hasAttributesObj) {
+    // Multi-attribute selection UI
+    const attributeKeys = Array.from(
+      new Set(activeVariants.flatMap((v) => (v.attributes ? Object.keys(v.attributes) : [])))
+    );
+
+    const [selectedAttrs, setSelectedAttrs] = useState<Record<string, string>>(() => {
+      if (selectedVariant?.attributes) return selectedVariant.attributes;
+      return activeVariants[0]?.attributes || {};
+    });
+
+    useEffect(() => {
+      if (selectedVariant?.attributes) {
+        setSelectedAttrs(selectedVariant.attributes);
+      }
+    }, [selectedVariant]);
+
+    const handleSelectAttr = (key: string, val: string) => {
+      const nextAttrs = { ...selectedAttrs, [key]: val };
+      setSelectedAttrs(nextAttrs);
+
+      // Find best matching variant
+      const match = activeVariants.find((v) => {
+        if (!v.attributes) return false;
+        return Object.entries(nextAttrs).every(([k, expectedVal]) => v.attributes![k] === expectedVal);
+      }) || activeVariants.find((v) => v.attributes?.[key] === val) || activeVariants[0];
+
+      if (match) onSelect(match);
+    };
+
+    return (
+      <div className="space-y-4">
+        {attributeKeys.map((attrKey) => {
+          const availableValues = Array.from(
+            new Set(
+              activeVariants
+                .map((v) => v.attributes?.[attrKey])
+                .filter(Boolean) as string[]
+            )
+          );
+
+          const currentVal = selectedAttrs[attrKey] || availableValues[0];
+
+          return (
+            <div key={attrKey}>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+                Select {attrKey}
+                {currentVal && (
+                  <span className="ml-2 text-[var(--pink)] font-semibold normal-case">
+                    — {currentVal}
+                  </span>
+                )}
+              </label>
+
+              <div className="flex flex-wrap gap-2.5">
+                {availableValues.map((val) => {
+                  const isSelected = currentVal === val;
+                  // Check stock for this specific attribute choice
+                  const matchingVariant = activeVariants.find(
+                    (v) => v.attributes?.[attrKey] === val
+                  );
+                  const inStock = matchingVariant ? matchingVariant.inventory_qty > 0 : true;
+
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleSelectAttr(attrKey, val)}
+                      className={`px-4 py-2.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                        isSelected
+                          ? 'bg-[var(--pink)] border-[var(--pink)] text-white shadow-md'
+                          : inStock
+                          ? 'bg-gray-50 border-gray-200 text-gray-800 hover:border-gray-400'
+                          : 'bg-gray-100 border-gray-200 text-gray-400 line-through'
+                      }`}
+                    >
+                      {val}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Selected Variant Stock & SKU */}
+        {selectedVariant && (
+          <div className="flex items-center gap-4 text-xs pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  selectedVariant.inventory_qty > 0 ? 'bg-green-500 animate-pulse-dot' : 'bg-red-400'
+                }`}
+              />
+              <span
+                className={`font-semibold ${
+                  selectedVariant.inventory_qty > 0 ? 'text-green-600' : 'text-red-500'
+                }`}
+              >
+                {selectedVariant.inventory_qty > 0
+                  ? `${selectedVariant.inventory_qty} in stock`
+                  : 'Out of stock'}
+              </span>
+            </div>
+            {selectedVariant.sku && (
+              <span className="text-gray-400 font-mono">SKU: {selectedVariant.sku}</span>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Single option deduplicated selector (Standard / Fallback)
+  const uniqueVariants = activeVariants.reduce<ProductVariant[]>((acc, current) => {
     const valKey = (current.option_value || current.sku || '').trim().toLowerCase();
     if (valKey && !acc.some((v) => (v.option_value || v.sku || '').trim().toLowerCase() === valKey)) {
       acc.push(current);
@@ -27,7 +149,7 @@ export default function VariantSelector({
 
   if (uniqueVariants.length === 0) return null;
 
-  const optionName = uniqueVariants[0]?.option_name || 'Flavor';
+  const optionName = uniqueVariants[0]?.option_name || 'Option';
   const useDropdown = uniqueVariants.length > 6;
 
   return (
@@ -43,7 +165,6 @@ export default function VariantSelector({
         </label>
 
         {useDropdown ? (
-          /* Dropdown Menu for > 6 Options */
           <div className="relative max-w-md">
             <select
               value={selectedVariant?.id || uniqueVariants[0]?.id}
@@ -72,7 +193,6 @@ export default function VariantSelector({
             </div>
           </div>
         ) : (
-          /* Pill Buttons for <= 6 Options */
           <div className="flex flex-wrap gap-2.5">
             {uniqueVariants.map((v) => {
               const isSelected = selectedVariant?.id === v.id;
@@ -83,8 +203,9 @@ export default function VariantSelector({
               return (
                 <button
                   key={v.id}
+                  type="button"
                   onClick={() => onSelect(v)}
-                  className={`px-4 py-2.5 rounded-full text-xs font-bold transition-all border ${
+                  className={`px-4 py-2.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
                     isSelected
                       ? 'bg-[var(--pink)] border-[var(--pink)] text-white shadow-md'
                       : inStock
@@ -103,7 +224,7 @@ export default function VariantSelector({
 
       {/* Selected Variant Stock & SKU */}
       {selectedVariant && (
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-4 text-xs pt-2 border-t border-gray-100">
           <div className="flex items-center gap-1.5">
             <span
               className={`w-2 h-2 rounded-full ${

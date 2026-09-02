@@ -89,7 +89,7 @@ export default function ContactPage() {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm focus:outline-none focus:border-[var(--pink)]"
-                    placeholder="(279) 777-7786"
+                    placeholder="+1 (213) 441-2345"
                   />
                 </div>
                 <div>
@@ -165,7 +165,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-white/70 uppercase">Call Support</h3>
-                  <a href="tel:+12797777786" className="text-lg font-bold hover:underline">(279) 777-7786</a>
+                  <a href="tel:+12134412345" className="text-lg font-bold hover:underline">+1 (213) 441-2345</a>
                 </div>
               </div>
             </div>

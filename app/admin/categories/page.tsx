@@ -11,6 +11,7 @@ export default function AdminCategoriesPage() {
   const [form, setForm] = useState({
     name: '',
     slug: '',
+    parent_id: '',
     logo_url: '',
   });
 
@@ -32,7 +33,7 @@ export default function AdminCategoriesPage() {
   }
 
   const resetForm = () => {
-    setForm({ name: '', slug: '', logo_url: '' });
+    setForm({ name: '', slug: '', parent_id: '', logo_url: '' });
   };
 
   const handleSave = async () => {
@@ -43,6 +44,7 @@ export default function AdminCategoriesPage() {
         body: JSON.stringify({
           name: form.name,
           slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          parent_id: form.parent_id || null,
           logo_url: form.logo_url || null,
         }),
       });
@@ -59,7 +61,7 @@ export default function AdminCategoriesPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Categories & Brands</h1>
-          <p className="text-zinc-500">Manage categories and brand collections</p>
+          <p className="text-zinc-500">Manage categories, subcategories, and brand collections</p>
         </div>
         <button
           onClick={() => { resetForm(); setIsModalOpen(true); }}
@@ -80,19 +82,35 @@ export default function AdminCategoriesPage() {
             <table className="w-full text-left text-sm text-zinc-300">
               <thead>
                 <tr className="text-xs text-zinc-500 uppercase tracking-wider border-b border-zinc-800 bg-zinc-950/40">
-                  <th className="px-6 py-3">Name</th>
+                  <th className="px-6 py-3">Category Name</th>
+                  <th className="px-6 py-3">Parent Category</th>
                   <th className="px-6 py-3">Slug</th>
                   <th className="px-6 py-3">Logo URL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {categories.map((cat) => (
-                  <tr key={cat.id || cat.slug} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-bold text-white">{cat.name}</td>
-                    <td className="px-6 py-4 text-sm text-zinc-400 font-mono">{cat.slug}</td>
-                    <td className="px-6 py-4 text-sm text-zinc-500">{cat.logo_url || '—'}</td>
-                  </tr>
-                ))}
+                {categories.map((cat) => {
+                  const parentCat = categories.find((c) => c.id === cat.parent_id || c.slug === cat.parent_id);
+                  return (
+                    <tr key={cat.id || cat.slug} className="hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-6 py-4 text-sm font-bold text-white flex items-center gap-2">
+                        {cat.parent_id && <span className="text-zinc-500 font-normal">↳</span>}
+                        {cat.name}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-zinc-400">
+                        {parentCat ? (
+                          <span className="px-2.5 py-1 bg-zinc-800 text-zinc-300 rounded-full text-xs font-semibold">
+                            {parentCat.name}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-600">— Main</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-zinc-400 font-mono">{cat.slug}</td>
+                      <td className="px-6 py-4 text-sm text-zinc-500">{cat.logo_url || '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -106,14 +124,29 @@ export default function AdminCategoriesPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-zinc-300 uppercase mb-2">Name *</label>
+            <label className="block text-xs font-bold text-zinc-300 uppercase mb-2">Category Name *</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-') })}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white text-sm focus:outline-none focus:border-[var(--pink)]"
-              placeholder="Brand / Category name"
+              placeholder="e.g. Mobile Accessories"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-zinc-300 uppercase mb-2">Parent Category (Optional)</label>
+            <select
+              value={form.parent_id}
+              onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white text-sm focus:outline-none focus:border-[var(--pink)] cursor-pointer"
+            >
+              <option value="">None (Top Level Category)</option>
+              {categories.map((cat) => (
+                <option key={cat.id || cat.slug} value={cat.id || cat.slug}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-bold text-zinc-300 uppercase mb-2">Slug</label>
@@ -122,17 +155,17 @@ export default function AdminCategoriesPage() {
               value={form.slug}
               onChange={(e) => setForm({ ...form, slug: e.target.value })}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white text-sm focus:outline-none focus:border-[var(--pink)] font-mono"
-              placeholder="brand-slug"
+              placeholder="category-slug"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-zinc-300 uppercase mb-2">Logo URL (Optional)</label>
+            <label className="block text-xs font-bold text-zinc-300 uppercase mb-2">Logo / Banner URL (Optional)</label>
             <input
               type="text"
               value={form.logo_url}
               onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
               className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white text-sm focus:outline-none focus:border-[var(--pink)]"
-              placeholder="/CALIIOHMZ.png"
+              placeholder="/logo.png"
             />
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">

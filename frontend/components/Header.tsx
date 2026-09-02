@@ -58,7 +58,7 @@ export default function Header() {
           <div className="flex items-center gap-3 sm:gap-5 shrink-0">
             {/* Phone — desktop only */}
             <a
-              href="tel:+12797777786"
+              href="tel:+12134412345"
               className="hidden lg:flex items-center gap-2 text-xs font-semibold text-gray-600 hover:text-[var(--pink)] transition-colors"
             >
               <div className="w-8 h-8 rounded-full bg-pink-50 text-[var(--pink)] flex items-center justify-center">
@@ -68,7 +68,7 @@ export default function Header() {
               </div>
               <div className="text-left">
                 <span className="block text-[10px] text-gray-400 uppercase tracking-wider">Support</span>
-                <span className="text-xs font-bold text-gray-900">(279) 777-7786</span>
+                <span className="text-xs font-bold text-gray-900">+1 (213) 441-2345</span>
               </div>
             </a>
 

@@ -114,7 +114,7 @@ export default function CheckoutForm() {
             onChange={handleChange}
             required
             className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm focus:outline-none focus:border-[var(--pink)]"
-            placeholder="(279) 777-7786"
+            placeholder="+1 (213) 441-2345"
           />
         </div>
       </div>

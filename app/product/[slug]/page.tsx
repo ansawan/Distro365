@@ -188,7 +188,7 @@ export default function ProductPage() {
         {/* Product Image Gallery */}
         <ProductGallery
           images={product.images || []}
-          mainImage={product.main_image}
+          mainImage={selectedVariant?.image_src || product.main_image}
           productName={product.title}
         />
 

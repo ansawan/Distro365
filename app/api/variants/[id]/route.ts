@@ -22,9 +22,13 @@ export async function PUT(
   if (body.sku !== undefined) updateData.sku = body.sku;
   if (body.option_name !== undefined) updateData.option_name = body.option_name;
   if (body.option_value !== undefined) updateData.option_value = body.option_value;
+  if (body.attributes !== undefined) updateData.attributes = body.attributes;
   if (body.price !== undefined) updateData.price = parseFloat(body.price) || 0;
+  if (body.compare_at_price !== undefined) updateData.compare_at_price = parseFloat(body.compare_at_price) || null;
   if (body.inventory_qty !== undefined) updateData.inventory_qty = parseInt(body.inventory_qty, 10) || 0;
   if (body.image_src !== undefined) updateData.image_src = body.image_src;
+  if (body.barcode !== undefined) updateData.barcode = body.barcode;
+  if (body.is_active !== undefined) updateData.is_active = Boolean(body.is_active);
 
   const { data, error } = await supabaseAdmin
     .from('product_variants')
